@@ -11,5 +11,8 @@ l3Controller.py - controlador para os switches l3 e futura firewall
 controller1.py - controlador para os switches l2
 
 
+
 ryu-manager --ofp-tcp-listen-port [6633,6634] [nome do controlador]  # 6633 para l2 e 6634 para l3
+
+
 sudo mn --controller=remote --custom [topologia.py] --topo=mytopo
