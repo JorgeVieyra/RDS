@@ -145,12 +145,6 @@ class L3switch(app_manager.RyuApp):
         
         #------------ TCP
         pkt_ipv4 = pkt.get_protocol(ipv4.ipv4)
-
-        #------------ Caso não seja ARP vai ser IPv4, mas vemos se é ICMP ping para o router/L3Switch
-        pkt_icmp =  pkt.get_protocol(icmp.icmp)
-        if pkt_icmp:           
-            self.handle_icmp(datapath,in_port,pkt_eth,pkt_ipv4,pkt_icmp)
-            return
             
         #------------ ONLY IPv4
         
@@ -339,54 +333,3 @@ class L3switch(app_manager.RyuApp):
                                 actions=actions,
                                 data=data)
         datapath.send_msg(out)
-
-    
-        
-
-    # Incompleto provavelmente
-    def handle_icmp(self, datapath, port, pkt_ethernet, pkt_ipv4, pkt_icmp):
-        if pkt_icmp.type != icmp.ICMP_ECHO_REQUEST:
-            return
-
-        else:
-
-            # Com IP de host tenho dados sobre por onde vou dar forwarding do meu router/L3switch 
-            data_ipdst = self.interfaces_routing[pkt_ipv4.src]
-
-            # IP de interface do router/L3Switch
-            src_ip_interface = data_ipdst[0]
-
-            # MAC de interface do router/L3Switch
-            src_mac_interface = self.ip_mac[src_ip_interface]
-
-
-
-            pkt = packet.Packet()
-            pkt.add_protocol(ethernet.ethernet(ethertype=pkt_ethernet.ethertype,
-                                            dst=pkt_ethernet.src,
-                                            src=src_mac_interface))
-            pkt.add_protocol(ipv4.ipv4(dst=pkt_ipv4.src,
-                                    src=src_ip_interface,
-                                    proto=pkt_ipv4.proto))
-
-            pkt.add_protocol(icmp.icmp(type_=icmp.ICMP_ECHO_REPLY,
-                                    code=icmp.ICMP_ECHO_REPLY_CODE,
-                                    csum=0,
-                                    data=pkt_icmp.data))
-
-            # crio o packet_out
-            ofproto = datapath.ofproto
-            parser = datapath.ofproto_parser
-            pkt.serialize()
-            self.logger.info("packet-out with ICMP ECHO PING REPLY %s" % (pkt,))
-            self.logger.info("------------------------------------------------------------")
-            
-            data = pkt.data
-            actions = [parser.OFPActionOutput(port=port)]
-            out = parser.OFPPacketOut(datapath=datapath,
-                                    buffer_id=ofproto.OFP_NO_BUFFER,
-                                    in_port=ofproto.OFPP_CONTROLLER,
-                                    actions=actions,
-                                    data=data)
-            datapath.send_msg(out)
-
