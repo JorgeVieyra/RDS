@@ -4,9 +4,9 @@ topoTP1Ex2.py - topologia mininet do TP1
 
 topoTP2.py  - topologia TP2
 
-l4controllerExample.py - exemplo que encontramos na internet, nao estamos a usar mas pode ser util para tirar ideias
+l3Controller.py - firewall para topologia do Ex2 do TP1
 
-l3Controller.py - controlador para os switches l3 e futura firewall
+firewall.py - firewall para a topologia do TP2
 
 controller1.py - controlador para os switches l2
 
@@ -16,3 +16,15 @@ ryu-manager --ofp-tcp-listen-port [6633,6634] [nome do controlador]  # 6633 para
 
 
 sudo mn --controller=remote --custom [topologia.py] --topo=mytopo
+
+
+Ex: Correr firewall para topologia do TP1:
+
+ryu-manager --ofp-tcp-listen-port 6633 controller1.py
+
+ryu-manager --ofp-tcp-listen-port 6634 l3Controller.py
+
+sudo mn --controller=remote --custom topoTP1Ex2.py --topo=mytopo
+
+
+
