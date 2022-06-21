@@ -4,6 +4,7 @@ from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_3, ether
 from ryu.lib.packet import packet, ether_types, ethernet, arp, icmp, ipv4, tcp
+from ryu.ofproto import inet
 
 
 class L3switch(app_manager.RyuApp):
@@ -29,17 +30,11 @@ class L3switch(app_manager.RyuApp):
                                     "10.0.0.3":["10.0.0.1", "10.0.0.0/24",1],
                                     "10.0.0.4":["10.0.0.1", "10.0.0.0/24",1],
                                     "10.0.1.2":["10.0.1.1", "10.0.1.0/24",2],
+                                    "10.0.1.3":["10.0.1.1", "10.0.1.0/24",2],
+                                    "10.0.1.4":["10.0.1.1", "10.0.1.0/24",2],
                                     "10.0.2.2":["10.0.2.1", "10.0.2.0/24",3],
-                                    "10.0.3.2":["10.0.3.1", "10.0.3.0/24",1],
-                                    "10.0.3.3":["10.0.3.1", "10.0.3.0/24",1],
-                                    "10.0.3.4":["10.0.3.1", "10.0.3.0/24",1],
-                                    "10.0.1.1":["10.0.1.2", "10.0.1.0/24",2],
-                                    "10.0.4.2":["10.0.4.1", "10.0.4.0/24",3],
-                                    "10.0.5.2":["10.0.5.1", "10.0.5.0/24",1],
-                                    "10.0.5.3":["10.0.5.1", "10.0.5.0/24",1],
-                                    "10.0.5.4":["10.0.5.1", "10.0.5.0/24",1],
-                                    "10.0.4.1":["10.0.4.2", "10.0.4.0/24",2],
-                                    "10.0.2.1":["10.0.2.2", "10.0.2.0/24",3]
+                                    "10.0.2.3":["10.0.2.1", "10.0.2.0/24",3],
+                                    "10.0.2.4":["10.0.2.1", "10.0.2.0/24",3]
                                 }
 
         # Definimos os macs dessas Interfaces
@@ -47,18 +42,20 @@ class L3switch(app_manager.RyuApp):
         # Tem de ser iguais aos do mininet
         self.ip_mac = {"10.0.0.1":"F6:C5:73:99:F4:F7",
                         "10.0.1.1":"E2:FA:8A:1F:99:10",
-                        "10.0.2.1":"C6:43:79:7E:EA:6B",
-                        "10.0.3.1":"D2:B3:40:BC:D9:29",
-                        "10.0.1.2":"8B:F0:Fb:28:FD:AF",
-                        "10.0.4.1":"48:6F:7C:61:42:55",
-                        "10.0.5.1":"26:C5:A4:01:75:26",
-                        "10.0.4.2":"93:3F:8A:E0:EE:6E",
-                        "10.0.2.2":"14:BA:BA:B6:4F:E1"}
+                        "10.0.2.1":"C6:43:79:7E:EA:6B"
+                        }
 
 
         # Cache de ARP
         self.cache_arp={"10.0.2.4":"00:00:00:00:02:04",
-                        "10.0.0.2":"00:00:00:00:00:02"}
+                        "10.0.0.2":"00:00:00:00:00:02",
+                        "10.0.0.3":"00:00:00:00:00:03",
+                        "10.0.0.4":"00:00:00:00:00:04",
+                        "10.0.1.2":"00:00:00:00:01:02",
+                        "10.0.1.3":"00:00:00:00:01:03",
+                        "10.0.1.4":"00:00:00:00:01:04",
+                        "10.0.2.2":"00:00:00:00:02:02",
+                        "10.0.2.3":"00:00:00:00:02:03"}
 
         # MAC e ports associados
         self.mac_to_port = {}
@@ -132,10 +129,7 @@ class L3switch(app_manager.RyuApp):
         if pkt_eth.ethertype == ether_types.ETH_TYPE_IPV6:
             # ignore ipv6
             return
-        
-        ips = ['10.0.5.2','10.0.3.4']
 
-        TCP_TYPE = 0x06
         #------------ Firewall
     #if(pkt_ipv4.src[5] == pkt_ipv4.dst[5] or pkt_ipv4.protocol == TCP_TYPE):
 
@@ -150,11 +144,7 @@ class L3switch(app_manager.RyuApp):
             return
         
         #------------ TCP
-        
         pkt_ipv4 = pkt.get_protocol(ipv4.ipv4)
-        #if pkt_tcp:
-        #    self.handle_tcp(datapath,in_port,pkt_eth,pkt_ipv4,pkt_tcp)
-        #    return
 
         #------------ Caso não seja ARP vai ser IPv4, mas vemos se é ICMP ping para o router/L3Switch
         pkt_icmp =  pkt.get_protocol(icmp.icmp)
@@ -163,8 +153,10 @@ class L3switch(app_manager.RyuApp):
             return
             
         #------------ ONLY IPv4
+        
         if pkt_ipv4:
-            self.handle_ipv4(datapath,in_port,pkt_eth,pkt_ipv4) 
+            self.handle_ipv4(datapath,in_port,pkt) 
+            return
 
             
         
@@ -175,6 +167,7 @@ class L3switch(app_manager.RyuApp):
     def handle_arp(self,datapath,port,pkt_ethernet,pkt_arp):      
         # Apenas guardo em cache se for ARP Reply
         if pkt_arp.opcode == arp.ARP_REPLY:
+            print("ARP REPLY")
             # Vejo para quem é
             # Guardo a cache do src ip o seu MAC
             ip_to_cache = pkt_arp.src_ip
@@ -207,7 +200,7 @@ class L3switch(app_manager.RyuApp):
                 pkt.add_protocol(arp.arp(opcode=arp.ARP_REPLY,
                                         src_mac=mac_wanted,
                                         src_ip=ip_wanted,
-                                        dst_mac=pkt_arp.src_mac,
+                                        dst_mac=pkt_ethernet.src,
                                         dst_ip=pkt_arp.src_ip))
 
                 # crio o packet_out
@@ -228,14 +221,18 @@ class L3switch(app_manager.RyuApp):
                 datapath.send_msg(out)
             
     # Provavelmente Incompleto
-    def handle_ipv4(self, datapath, port, pkt_ethernet, pkt_ipv4):
+    def handle_ipv4(self, datapath,in_port, pkt):
         # Vamos usar a cache_arp para verificar se temos o endereço mac do destino, se não tivermos 
         # termos de enviar um arp request
 
         # Com IP de host tenho dados sobre por onde vou dar forwarding do meu router/L3switch 
+        pkt_ipv4 = pkt.get_protocol(ipv4.ipv4)
+        pkt_ethernet = pkt.get_protocol(ethernet.ethernet)
+        pkt_tcp = pkt.get_protocol(tcp.tcp)
+
         print("ENDEREÇO IP DE SRC: ",pkt_ipv4.src)
 
-        data_ipdst = self.interfaces_routing[pkt_ipv4.src]
+        data_ipdst = self.interfaces_routing[pkt_ipv4.dst]
 
         # IP de interface do router/L3Switch
         src_ip_interface = data_ipdst[0]
@@ -246,25 +243,69 @@ class L3switch(app_manager.RyuApp):
         #Verifico se tenho MAC de host dst
         mac_dst = self.cache_arp[pkt_ipv4.dst]
 
-        s = 0
+        out_port = data_ipdst[2]
+
+        
         if mac_dst:
-            pkt = packet.Packet()
-            pkt.add_protocol(ethernet.ethernet(ethertype=pkt_ethernet.ethertype,
-                                            dst=mac_dst,
-                                            src=src_mac_interface))
-            pkt.add_protocol(ipv4.ipv4(dst=pkt_ipv4.dst,
-                                    src=src_ip_interface,
-                                    proto=pkt_ipv4.proto))
+            if(pkt_ipv4.proto == inet.IPPROTO_TCP):
+                s=0
+
+                #---------------FIREWALL---------------
+                targets = ['10.0.0.2', '10.0.1.2', '10.0.2.4']
+                http_hosts = ['10.0.0.2', '10.0.1.2']
+                
+                if pkt_ipv4.src not in targets or pkt_ipv4.dst not in targets or (pkt_ipv4.src in http_hosts and pkt_tcp.dst_port != 5555) or (pkt_ipv4.src == '10.0.2.4' and pkt_tcp.src_port != 5555):
+                    return
+                if pkt_ipv4.src in http_hosts and pkt_ipv4.dst in http_hosts:
+                    return
+                #--------------------------------------
+
+                paket = packet.Packet()
+                paket.add_protocol(ethernet.ethernet(ethertype=pkt_ethernet.ethertype,
+                                                dst=mac_dst,
+                                                src=src_mac_interface))
+                paket.add_protocol(ipv4.ipv4(dst=pkt_ipv4.dst,
+                                        src=src_ip_interface,
+                                        proto=pkt_ipv4.proto,
+                                        version = pkt_ipv4.version,
+                                        header_length = pkt_ipv4.header_length,
+                                        tos = pkt_ipv4.tos,
+                                        total_length = pkt_ipv4.total_length,
+                                        identification = pkt_ipv4.identification,
+                                        flags = pkt_ipv4.flags,
+                                        offset = pkt_ipv4.offset,
+                                        ttl = pkt_ipv4.ttl,
+                                        csum = pkt_ipv4.csum,
+                                        option = pkt_ipv4.option))
+                paket.add_protocol(tcp.tcp(src_port = pkt_tcp.src_port,
+                                        dst_port = pkt_tcp.dst_port,
+                                        seq = pkt_tcp.seq,
+                                        ack = pkt_tcp.ack,
+                                        offset = pkt_tcp.offset,
+                                        bits = pkt_tcp.bits,
+                                        window_size = pkt_tcp.window_size,
+                                        csum = pkt_tcp.csum,
+                                        urgent = pkt_tcp.urgent,
+                                        option = pkt_tcp.option))
+            else:    
+                s=2
+                paket = packet.Packet()
+                paket.add_protocol(ethernet.ethernet(ethertype=pkt_ethernet.ethertype,
+                                                dst=mac_dst,
+                                                src=src_mac_interface))
+                paket.add_protocol(ipv4.ipv4(dst=pkt_ipv4.dst,
+                                        src=src_ip_interface,
+                                        proto=pkt_ipv4.proto))
 
         else:
             s =1
             # Se não possuir MAC na cache envio ARP Request
-            pkt = packet.Packet()
-            pkt.add_protocol(ethernet.ethernet(
+            paket = packet.Packet()
+            paket.add_protocol(ethernet.ethernet(
                                 ethertype=ether.ETH_TYPE_ARP,
                                 src=src_mac_interface))
 
-            pkt.add_protocol(arp.arp(opcode=arp.ARP_REQUEST,
+            paket.add_protocol(arp.arp(opcode=arp.ARP_REQUEST,
                                 src_mac=src_mac_interface,
                                 src_ip=src_ip_interface,
                                 dst_ip=pkt_ipv4.dst))
@@ -274,61 +315,32 @@ class L3switch(app_manager.RyuApp):
         # crio o packet_out
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-        pkt.serialize()
-        if s == 0:
+        paket.serialize()
+        if s == 2:
             self.logger.info("packet-out with forwarding IPv4 packet %s" % (pkt,))
+            self.logger.info("------------------------------------------------------------")
+        
+        if s == 0:
+            self.logger.info("packet-out with forwarding TCP packet %s" % (pkt,))
             self.logger.info("------------------------------------------------------------")
 
         else:
             self.logger.info("packet-out with ARP Request %s" % (pkt,))
             self.logger.info("------------------------------------------------------------")
 
-        data = pkt.data
-        actions = [parser.OFPActionOutput(port=port)]
+        data = paket.data
+        print(out_port)
+        if(paket.get_protocol(arp.arp)):
+            out_port = in_port
+        actions = [parser.OFPActionOutput(out_port)]
         out = parser.OFPPacketOut(datapath=datapath,
                                 buffer_id=ofproto.OFP_NO_BUFFER,
                                 in_port=ofproto.OFPP_CONTROLLER,
                                 actions=actions,
                                 data=data)
-        datapath.send_msg(out)              
-        return
+        datapath.send_msg(out)
 
-    def handle_tcp(self, datapath, port, pkt_ethernet, pkt_ipv4, pkt_tcp):
-        # Com IP de host tenho dados sobre por onde vou dar forwarding do meu router/L3switch 
-            data_ipdst = self.interfaces_routing[pkt_ipv4.src]
-
-            # IP de interface do router/L3Switch
-            src_ip_interface = data_ipdst[0]
-
-            # MAC de interface do router/L3Switch
-            src_mac_interface = self.ip_mac[src_ip_interface]
-
-
-
-            pkt = packet.Packet()
-            pkt.add_protocol(ethernet.ethernet(ethertype=pkt_ethernet.ethertype,
-                                            dst=pkt_ethernet.src,
-                                            src=src_mac_interface))
-            pkt.add_protocol(ipv4.ipv4(dst=pkt_ipv4.src,
-                                    src=src_ip_interface,
-                                    proto=pkt_ipv4.proto))
-
-            pkt.add_protocol(tcp.tcp(src_port = pkt_tcp.src_port,
-                                     dst_port = pkt_tcp.dst_port))
-
-            # crio o packet_out
-            ofproto = datapath.ofproto
-            parser = datapath.ofproto_parser
-            pkt.serialize()
-            
-            data = pkt.data
-            actions = [parser.OFPActionOutput(port=port)]
-            out = parser.OFPPacketOut(datapath=datapath,
-                                    buffer_id=ofproto.OFP_NO_BUFFER,
-                                    in_port=ofproto.OFPP_CONTROLLER,
-                                    actions=actions,
-                                    data=data)
-            datapath.send_msg(out)
+    
         
 
     # Incompleto provavelmente
