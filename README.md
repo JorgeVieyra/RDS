@@ -1,4 +1,5 @@
-# Trabalhos práticos de Redes definidas por Software
+# RDS
+Repositório dos trabalhos práticos da UC de Redes Definidas por Software
 
 ## TP1 - Controladores Openflow
 
