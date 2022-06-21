@@ -1,14 +1,12 @@
-# RDS
+# Trabalhos práticos de Redes definidas por Software
 
-Trabalhos práticos de Redes definidas por Software
+## TP1 - Controladores Openflow
 
-TP1 - Controladores Openflow
+## TP2 - Network Management
 
-TP2 - Network Management
+## TP3 - Data Plane
 
-TP3 - Data Plane
-
-Conteúdo do TP2:
+### Conteúdo do TP2:
 
 topoTP1Ex2.py - topologia mininet do TP1
 
@@ -21,7 +19,7 @@ firewall.py - firewall para a topologia do TP2
 controller1.py - controlador para os switches l2
 
 
-Comandos para correr o trabalho:
+ ### Comandos para correr o trabalho:
 
 ryu-manager --ofp-tcp-listen-port [6633,6634] [nome do controlador]  # 6633 para l2 e 6634 para l3
 
