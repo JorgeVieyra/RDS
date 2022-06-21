@@ -5,10 +5,6 @@ Repositório dos trabalhos práticos da UC de Redes Definidas por Software
 
 ## TP2 - Network Management
 
-## TP3 - Data Plane
-
-### Conteúdo do TP2:
-
 topoTP1Ex2.py - topologia mininet do TP1
 
 topoTP2.py  - topologia TP2
@@ -19,8 +15,9 @@ firewall.py - firewall para a topologia do TP2
 
 controller1.py - controlador para os switches l2
 
+## TP3 - Data Plane
 
- ### Comandos para correr o trabalho:
+ ### Comandos para correr os trabalhos:
 
 ryu-manager --ofp-tcp-listen-port [6633,6634] [nome do controlador]  # 6633 para l2 e 6634 para l3
 
